@@ -50,6 +50,39 @@ void GincoBridge::send_can_msg(GCanMessage m){
     this->can_controller.send_can_msg(this->can_controller.give_can_id(m.event,m.source_module_id, m.feature_type,m.index,m.function_address,m.ack),data_buffer,m.buffer_size);
 }
 
+void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
+    this->flash.begin("saved_scenes", false);
+    unsigned int scene_count = this->flash.getUInt("scounter", 0);
+    String key= "name";
+    Serial.println(key+scene_count);
+    String data= scene_json["to_save"];
+    this->flash.putString((key+scene_count).c_str(),data);
+    key="trigger";
+    long triggerID=scene_json["triggers"];
+    //this->flash.putBytes((key+scene_count).c_str(),t,4);
+    int count_triggers=0;
+    while(true){
+        triggerID=scene_json["triggers"][count_triggers];
+        if(triggerID==0){
+            break;
+        }
+        else{
+            count_triggers++;
+        }
+    }
+    int trigger_size=4*count_triggers;
+    trigger_size = (trigger_size>80)? 80:trigger_size;
+    byte t[4];
+    byte ts[trigger_size];
+    for(int i= 0; i<count_triggers;i++){
+        triggerID=scene_json["triggers"][i];
+        memcpy(t,&triggerID,4);
+    }
+    //Serial.print("from memory: ");Serial.println( this->flash.getString((key+scene_count).c_str(),"failed"));
+    this->flash.end();
+}
+
+
 void GincoBridge::loop(){
     //loop can-driver
     this->can_controller.check_can_bus();

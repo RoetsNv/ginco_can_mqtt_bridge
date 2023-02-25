@@ -1,5 +1,6 @@
 #include "ginco_can_controller.h"
-
+char templateName[6]="name";
+char templateTrigger[9]="trigger";
 GCANController::GCANController(byte moduleID):
 moduleID(moduleID)
 {

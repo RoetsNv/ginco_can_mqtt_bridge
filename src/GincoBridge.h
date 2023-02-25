@@ -2,6 +2,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
+#include <Preferences.h>
+
 #include <controllers/ginco_can_controller.h>
 class GincoBridge {
     private:
@@ -19,6 +21,8 @@ class GincoBridge {
         StaticJsonDocument<256> to_sendJSON;
         StaticJsonDocument<256> receivedJSON;
         PubSubClient *mqtt_client;
+        Preferences flash;
+
 
     public:
         int output_state[7];
@@ -27,6 +31,7 @@ class GincoBridge {
         void long_to_data_buffer(long input);
         void on_can_msg(GCanMessage m);
         void send_can_msg(GCanMessage m);
+        void write_scene(StaticJsonDocument<256> scene_json);
         void identify();
         void loop();
 
