@@ -77,6 +77,31 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
     for(int i= 0; i<count_triggers;i++){
         triggerID=scene_json["triggers"][i];
         memcpy(t,&triggerID,4);
+        int memindex=0;
+        Serial.println("writing: " +triggerID);
+        for(int j= 0; j<4;j++){
+            memindex=(4*i)+j;
+            Serial.print(t[j],HEX);Serial.print(" on spot: "); Serial.println(memindex);
+            ts[memindex]=t[j];
+        }
+    }
+    this->flash.putBytes((key+scene_count).c_str(),ts,trigger_size);
+    byte red[this->flash.getBytesLength((key+scene_count).c_str())];
+    this->flash.getBytes((key+scene_count).c_str(),red,this->flash.getBytesLength((key+scene_count).c_str()));
+    for(int i= 0; i<count_triggers;i++){
+        long value = 0; // Initialize a long variable to store the converted value
+        // Use bitwise operators to shift and combine the bytes into a long
+        Serial.print("reading: ");Serial.println(i);
+        Serial.println(red[(4*i)],HEX);
+        Serial.println(red[((4*i)+1)],HEX);
+        Serial.println(red[((4*i)+2)],HEX);
+        Serial.println(red[((4*i)+3)],HEX);
+        value |= (long)red[((4*i)+3)] << 24;
+        value |= (long)red[((4*i)+2)] << 16;
+        value |= (long)red[((4*i)+1)] << 8;
+        value |= red[(4*i)];
+        int memindex=0;
+        Serial.print("from memory: ");Serial.println(value);
     }
     //Serial.print("from memory: ");Serial.println( this->flash.getString((key+scene_count).c_str(),"failed"));
     this->flash.end();
