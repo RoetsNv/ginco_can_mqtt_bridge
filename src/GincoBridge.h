@@ -32,6 +32,8 @@ class GincoBridge {
         void on_can_msg(GCanMessage m);
         void send_can_msg(GCanMessage m);
         void write_scene(StaticJsonDocument<256> scene_json);
+        void check_scenes(long canID);
+        void clear_data_buffer();
         void identify();
         void loop();
 
