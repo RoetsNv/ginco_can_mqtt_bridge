@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Power dB Watt Conversion</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body>
+  feature_type,byte index_number,byte func_id,boolean ack
+<div class="container">
+  <h2>Text to ascii</h2>
+  <form action="/action_page.php">
+    <div class="form-check-inline">
+      <label class="form-check-label" for="radio1">
+        <input type="checkbox" class="form-check-input" id="is_event"  oninput="TextToAscii()">Is Event?</label>
+    </div>
+    <div class="form-group">
+      <label for="regularText">Module ID:</label>
+      <textarea  type="number" class="form-control" id="module_id"  oninput="TextToAscii()"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="regularText">index:</label>
+      <textarea  type="number" class="form-control" id="index"  oninput="TextToAscii()"></textarea>
+    </div>
+    <div class="form-group">
+      <label for="regularText">functionID:</label>
+      <textarea  type="number" class="form-control" id="function_id"  oninput="TextToAscii()"></textarea>
+    </div>
+    <div class="form-check-inline">
+      <label class="form-check-label" for="radio1">
+        <input type="checkbox" class="form-check-input" id="is_ack"  oninput="TextToAscii()">Is Ack?</label>
+    </div>
+
+    <div class="form-group">
+      <label for="outputText">Output text:</label>
+      <textarea class="form-control" id="outputText" name="outputText" value="" oninput="PdBtoPW()"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>
+</div>
+
+<script>
+function TextToAscii() {
+  var is_event, module_id, index, function_id, is_ack;
+
+  // Get the value of the input field with id="numb"
+  is_event=document.getElementById('is_event').checked;
+  is_ack=document.getElementById('is_ack').checked;
+  module_id = document.getElementById("module_id").value;
+  index = document.getElementById("index").value;
+  function_id = document.getElementById("function_id").value;
+  if(document.getElementById('is_event').checked == true) {
+    numerator = 2;
+    prefix = "0b";
+  } else if(document.getElementById('radio2').checked == true) {   
+      numerator = 10;
+      prefix = "";
+  } else if(document.getElementById('radio3').checked == true) {   
+        numerator = 16;
+        prefix = "0x";
+  }
+
+  console.log("numerator = " + numerator);
+
+
+  // If x is Not a Number or less than one or greater than 10
+/*   if (isNaN(x) || x < 0) {
+    text = "0";
+  } else {
+    text = 10*Math.log10(x*1000) + "" ;
+  } */
+  
+  outputText = "";
+  for (var i = 0; i < inputText.length; i++) {
+    outputText += prefix;
+    outputText += inputText.charCodeAt(i).toString(numerator);
+    if(i < inputText.length){
+      outputText += delimiter;
+    } 
+  }
+  document.getElementById("outputText").value = outputText;
+}
+function give_can_id(is_event, targetmoduleID, feature_type, index_number, func_id, ack) {
+// Event: 0x4000000 Action: 0x00
+let can_id = is_event ? 0x4000000 : 0x00;
+can_id += ack ? 0x10000 : 0x00;
+// Set module id
+let mod_id = 0;
+mod_id += targetmoduleID;
+mod_id = mod_id << 18;
+can_id = can_id + mod_id;
+// Set 8 bit feature address
+feature_type = feature_type << 5;
+feature_type += index_number;
+let feat_interf = 0;
+feat_interf += feature_type;
+feat_interf = feat_interf << 8;
+feat_interf += func_id;
+can_id += feat_interf;
+let buffer = can_id.toString(16);
+console.log(buffer);
+return can_id;
+}
+
+/* function PdBtoPW() {
+  var x, text;
+
+  // Get the value of the input field with id="numb"
+  x = document.getElementById("PdB").value;
+
+  // If x is Not a Number or less than one or greater than 10
+  if (isNaN(x) ) {
+    text = "0";
+  } else {
+    text = Math.pow(10, x/10)/1000+ "" ;
+  }
+  document.getElementById("PW").value = text;
+} */
+</script>
+
+</body>
+</html>

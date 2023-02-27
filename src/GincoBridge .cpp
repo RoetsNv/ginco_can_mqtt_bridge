@@ -93,6 +93,10 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
     int groupID=scene_json["group"];
     key="group";
     this->flash.putInt((key+scene_count).c_str(),groupID);
+    //Put group index
+    key="group_index";
+    groupID=scene_json["group_index"];
+    this->flash.putInt((key+scene_count).c_str(),groupID);
     //put action ID's
     key="action";
     count_triggers=0;
