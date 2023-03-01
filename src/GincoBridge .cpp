@@ -1,5 +1,14 @@
 #include "GincoBridge.h"
 
+long buff_to_long(byte*b,int i){
+    long result=0;
+    result = 0;
+    result |= (long)b[((4*i)+3)] << 24;
+    result |= (long)b[((4*i)+2)] << 16;
+    result |= (long)b[((4*i)+1)] << 8;
+    result |= b[(4*i)];
+    return result;
+}
 GincoBridge::GincoBridge(byte moduleID, String friendly_name,PubSubClient* client):
     moduleID(moduleID),
     friendly_name(friendly_name),
@@ -10,6 +19,35 @@ GincoBridge::GincoBridge(byte moduleID, String friendly_name,PubSubClient* clien
     this->heartbeat_interval=2000;
     this->now=millis();
     this->can_controller=GCANController(this->moduleID);
+    this->flash.begin("saved_scenes", true);
+    int scene_count = this->flash.getInt("scounter", -1);
+    if(scene_count>0){
+        this->scene_triggers=new long*[scene_count];
+        String key= "triggers";
+        int arr_size;
+        for(uint16_t i=0;i<scene_count;i++){
+            arr_size= (this->flash.getBytesLength((key+i).c_str()));
+            this->scene_triggers[i]=new long[(arr_size/4)];
+            byte tt[arr_size];
+            this->flash.getBytes((key+i).c_str(),tt,arr_size);
+            //convert bytes to long
+            for(uint16_t trigger_index=0;trigger_index<(arr_size/4);trigger_index++){
+            this->scene_triggers[i][trigger_index] = buff_to_long(tt,trigger_index);
+            }
+        }
+        this->flash.end();
+        for(uint16_t i=0;i<scene_count;i++){
+            arr_size= (this->flash.getBytesLength((key+i).c_str()));
+            this->scene_triggers[i]=new long[(arr_size/4)];
+            byte tt[arr_size];
+            this->flash.getBytes((key+i).c_str(),tt,arr_size);
+            //convert bytes to long
+            for(uint16_t trigger_index=0;trigger_index<(arr_size/4);trigger_index++){
+            this->scene_triggers[i][trigger_index] = buff_to_long(tt,trigger_index);
+            }
+        }
+    }
+
 }
 
 void GincoBridge::long_to_data_buffer(long input){
@@ -23,7 +61,7 @@ void GincoBridge::identify(){
     Serial.print("I am: ");Serial.print(this->friendly_name);Serial.print(" ID: ");Serial.println(this->moduleID);
 }
 void GincoBridge::clear_data_buffer(){
-    for(int i=0;i<8;i++){
+    for(uint8_t i=0;i<8;i++){
         this->data_buffer[i]=0x00;
     }
 }
@@ -54,10 +92,15 @@ void GincoBridge::send_can_msg(GCanMessage m){
 }
 
 void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
+    int check_group=scene_json["actions"][0];
+    if(check_group == 0){
+        //set group cycle
+        this->flash.begin("scene_groups", false);
+
+    }
     this->flash.begin("saved_scenes", false);
-    unsigned int scene_count = this->flash.getUInt("scounter", 0);
+    int scene_count = this->flash.getInt("scounter", 0);
     String key= "name";
-    Serial.println(key+scene_count);
     String data= scene_json["to_save"];
     this->flash.putString((key+scene_count).c_str(),data);
     //put trigger ID's
@@ -77,14 +120,14 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
     id_arr_size = (id_arr_size>80)? 80:id_arr_size;
     byte t[4];
     byte tt[id_arr_size];
-    for(int i= 0; i<count_triggers;i++){
+    for(uint16_t i= 0; i<count_triggers;i++){
         canID=scene_json["triggers"][i];
         memcpy(t,&canID,4);
-        int memindex=0;
+        uint16_t memindex=0;
         Serial.println("writing: " +canID);
-        for(int j= 0; j<4;j++){
+        for(uint16_t j= 0; j<4;j++){
             memindex=(4*i)+j;
-            Serial.print(t[j],HEX);Serial.print(" on spot: "); Serial.println(memindex);
+            //Serial.print(t[j],HEX);Serial.print(" on spot: "); Serial.println(memindex);
             tt[memindex]=t[j];
         }
     }
@@ -115,13 +158,13 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
     byte ta[id_arr_size];
     byte td[id_arr_size];
     long payload_data;
-    for(int i= 0; i<count_triggers;i++){
+    for(uint16_t i= 0; i<count_triggers;i++){
         canID=scene_json["actions"][i];
         payload_data=scene_json["actions_data"][i];
         memcpy(t,&canID,4);
         memcpy(d,&payload_data,4);
         int memindex=0;
-        for(int j= 0; j<4;j++){
+        for(uint8_t j= 0; j<4;j++){
             memindex=(4*i)+j;
             tt[memindex]=t[j];
             td[memindex]=d[j];
@@ -147,7 +190,7 @@ void GincoBridge::check_scenes(long canID){
     String key= "triggers";
     long mem_canID;
     int arr_size;
-    for(int i=0;i<scene_count;i++){
+    for(uint16_t i=0;i<scene_count;i++){
         arr_size= (this->flash.getBytesLength((key+i).c_str()));
         byte tt[arr_size];
         this->flash.getBytes((key+i).c_str(),tt,arr_size);
@@ -155,29 +198,35 @@ void GincoBridge::check_scenes(long canID){
         mem_canID = buff_to_long(tt,i);
         if(mem_canID==canID){
             //Its a match!
-            key="actions";
-            arr_size=this->flash.getBytesLength((key+i).c_str());
-            byte ta[arr_size];
-            byte td[arr_size];
-            this->flash.getBytes((key+i).c_str(),ta,arr_size);
-            key="actions_data";
-            this->flash.getBytes((key+i).c_str(),td,arr_size);
-            //4 bytes per long;
-            arr_size = arr_size/4;
-            for(int j=0;j<arr_size;j++){
-                //fill data buffer with payload
-                this->clear_data_buffer();
-                for(int data_index=0;data_index<4;data_index++){
-                   data_buffer[data_index]= td[((4*j)+data_index)];     
-                }
-                //send action on bus
-                this->can_controller.send_can_msg(buff_to_long(tt,i),data_buffer,8);
-            }
+            this->activate_scene(i);
         }
     }
     this->flash.end();
 }
-
+void GincoBridge::activate_scene(int i){ 
+    this->flash.begin("saved_scenes", true);
+    String key="actions";
+    int arr_size=this->flash.getBytesLength((key+i).c_str());
+    byte ta[arr_size];
+    byte td[arr_size];
+    //get action can id's
+    this->flash.getBytes((key+i).c_str(),ta,arr_size);
+    key="actions_data";
+    //get actionData 
+    this->flash.getBytes((key+i).c_str(),td,arr_size);
+    //4 bytes per long;
+    arr_size = arr_size/4;
+    for(uint16_t j=0;j<arr_size;j++){
+        //fill data buffer with payload
+        this->clear_data_buffer();
+        for(uint16_t data_index=0;data_index<4;data_index++){
+            data_buffer[data_index]= td[((4*j)+data_index)];     
+        }
+        //send action on bus
+        this->can_controller.send_can_msg(buff_to_long(ta,i),data_buffer,8);
+    }
+    this->flash.end();
+}
 void GincoBridge::loop(){
     //loop can-driver
     this->can_controller.check_can_bus();
