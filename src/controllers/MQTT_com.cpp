@@ -99,6 +99,7 @@ void callback(char* topic, byte* message, unsigned int length) {
       gb.write_scene(receivedMsg);
     }
 
+
     // String reqState= receivedMsg["state"];
     // int y=receivedMsg["brightness"];
 

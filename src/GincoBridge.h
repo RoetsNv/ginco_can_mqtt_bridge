@@ -22,7 +22,8 @@ class GincoBridge {
         StaticJsonDocument<256> receivedJSON;
         PubSubClient *mqtt_client;
         Preferences flash;
-
+        long **scene_triggers;
+        long **toggle_scene_triggers;
 
     public:
         int output_state[7];
@@ -34,6 +35,7 @@ class GincoBridge {
         void write_scene(StaticJsonDocument<256> scene_json);
         void check_scenes(long canID);
         void clear_data_buffer();
+        void activate_scene(int index);
         void identify();
         void loop();
 
