@@ -48,19 +48,33 @@ void GincoBridge::flash_to_ram(){
             for(uint16_t trigger_index=0;trigger_index<(arr_size/4);trigger_index++){
             this->scene_triggers[i][trigger_index] = buff_to_long(tt,trigger_index);
             }
+            //Save index to group for later reference;
+            key="group";
+            int groupid=this->flash.getInt((key+scene_count).c_str(),-1);
+            if(groupid>=0){
+                key="group_index";
+                int group_index=this->flash.getInt((key+scene_count).c_str(),-1);
+                if(group_index>=0){
+                    this->group_data[groupid][group_index] = scene_count;
+                }
+            }
         }
         this->flash.end();
         this->flash.begin("scene_groups", true);
-        for(uint16_t i=0;i<scene_count;i++){
-            arr_size= (this->flash.getBytesLength((key+i).c_str()));
-            this->scene_triggers[i]=new long[(arr_size/4)];
-            byte tt[arr_size];
-            this->flash.getBytes((key+i).c_str(),tt,arr_size);
-            //convert bytes to long
-            for(uint16_t trigger_index=0;trigger_index<(arr_size/4);trigger_index++){
-            this->scene_triggers[i][trigger_index] = buff_to_long(tt,trigger_index);
+        int group_count = this->flash.getInt("gcounter", -1);
+        if(group_count>0){
+            for(uint16_t i=0;i<group_count;i++){
+                arr_size= (this->flash.getBytesLength((key+i).c_str()));
+                this->toggle_scene_triggers[i]=new long[(arr_size/4)];
+                byte tt[arr_size];
+                this->flash.getBytes((key+i).c_str(),tt,arr_size);
+                //convert bytes to long
+                for(uint16_t trigger_index=0;trigger_index<(arr_size/4);trigger_index++){
+                this->toggle_scene_triggers[i][trigger_index] = buff_to_long(tt,trigger_index);
+                }
             }
         }
+        
         this->flash.end();
     }
 }
@@ -111,6 +125,8 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
     if(check_group == 0){
         //set group cycle
         this->flash.begin("scene_groups", false);
+        int scene_groups = this->flash.getInt("gcounter", 0);
+
 
     }
     this->flash.begin("saved_scenes", false);

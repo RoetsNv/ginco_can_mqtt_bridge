@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <Preferences.h>
+#include <list>
 
 #include <controllers/ginco_can_controller.h>
 class GincoBridge {
@@ -18,12 +19,14 @@ class GincoBridge {
         int timer_ticks[2]={0,0};
         unsigned long now;
         unsigned long heartbeat_interval; //when heartbeats should be send
-        StaticJsonDocument<256> to_sendJSON;
+        StaticJsonDocument<256> to_sendJSON; // buffers used to publish/receive mqtt messages
         StaticJsonDocument<256> receivedJSON;
-        PubSubClient *mqtt_client;
-        Preferences flash;
-        long **scene_triggers=nullptr;
+        PubSubClient *mqtt_client; // MQTT client to talk to
+        Preferences flash; // Persistant storage ESP32
+        long **scene_triggers=nullptr; //RAM access to increase performance
         long **toggle_scene_triggers=nullptr;
+        uint16_t group_data[15][15];
+
 
     public:
         int output_state[7];
