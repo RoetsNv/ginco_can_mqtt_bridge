@@ -23,10 +23,10 @@ class GincoBridge {
         StaticJsonDocument<256> receivedJSON;
         PubSubClient *mqtt_client; // MQTT client to talk to
         Preferences flash; // Persistant storage ESP32
-        long **scene_triggers=nullptr; //RAM access to increase performance
-        long **toggle_scene_triggers=nullptr;
-        uint16_t group_data[15][15];
-
+        long **scene_triggers=nullptr; //RAM access to increase performance:  first index -> index in list of scenes ; second index -> list of triggers that trigger that scene
+        long *toggle_scene_triggers[15]; //first index -> scene group index ; second index -> list of triggers that trigger the scene cycling
+        uint16_t group_data[15][15]={256};
+        
 
     public:
         int output_state[7];
@@ -38,7 +38,8 @@ class GincoBridge {
         void write_scene(StaticJsonDocument<256> scene_json);
         void check_scenes(long canID);
         void clear_data_buffer();
-        void activate_scene(int index);
+        void activate_scene(uint16_t index);
+        void cycle_scene_group(uint16_t group_id);
         void flash_to_ram();
         void identify();
         void loop();
