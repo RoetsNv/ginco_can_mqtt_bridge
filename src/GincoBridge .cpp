@@ -118,8 +118,9 @@ void GincoBridge::on_can_msg(GCanMessage g){
     serializeJson(this->to_sendJSON, msgString,256);
     this->topic_string[20] = "0123456789ABCDEF"[g.source_module_id >> 4];
     this->topic_string[21] = "0123456789ABCDEF"[g.source_module_id & 0x0F];
-    Serial.print("publishing to : ");Serial.println(this->topic_string);
     this->mqtt_client->publish(this->topic_string, msgString,256);
+    Serial.print("In json: Can id is : ");Serial.println(g.extended_id);
+
 }
 
 void GincoBridge::send_can_msg(GCanMessage m){
@@ -169,15 +170,18 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
             }
         }
         this->flash.putBytes((key+group_counter).c_str(),tt,id_arr_size);
-
+        this->flash.end();
 
     }
     else{
+        Serial.println("msg is a standard scene definition");
         // msg is a standard scene definition
         this->flash.begin("saved_scenes", false);
         int scene_count = this->flash.getInt("scounter", -1) +1; //index should start at 0 --> +1 
+        Serial.print("scene index is: ");Serial.println(scene_count);
         key= "name";
-        String data= scene_json["to_save"];
+        String data= scene_json["name"];
+        Serial.print("name: ");Serial.println(data);
         this->flash.putString((key+scene_count).c_str(),data);
         //put trigger ID's
         key="trigger";
@@ -192,6 +196,7 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
                 count_triggers++;
             }
         }
+        Serial.print("Trigger size is : ");Serial.println(count_triggers);
         int id_arr_size=4*count_triggers;
         id_arr_size = (id_arr_size>80)? 80:id_arr_size;
         byte t[4];
@@ -203,7 +208,7 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
             Serial.println("writing: " +canID);
             for(uint16_t j= 0; j<4;j++){
                 memindex=(4*i)+j;
-                //Serial.print(t[j],HEX);Serial.print(" on spot: "); Serial.println(memindex);
+                Serial.print(t[j],HEX);Serial.print(" on spot: "); Serial.println(memindex);
                 tt[memindex]=t[j];
             }
         }
@@ -228,6 +233,7 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
                 count_triggers++;
             }
         }
+                Serial.print("Action size is : ");Serial.println(count_triggers);
         id_arr_size=4*count_triggers;
         id_arr_size = (id_arr_size>80)? 80:id_arr_size;
         byte d[4];
@@ -237,6 +243,7 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
         for(uint16_t i= 0; i<count_triggers;i++){
             canID=scene_json["actions"][i];
             payload_data=scene_json["actions_data"][i];
+            Serial.println("writing: " +canID);
             memcpy(t,&canID,4);
             memcpy(d,&payload_data,4);
             int memindex=0;

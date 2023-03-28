@@ -25,7 +25,7 @@ class GincoBridge {
         Preferences flash; // Persistant storage ESP32
         long **scene_triggers=nullptr; //RAM access to increase performance:  first index -> index in list of scenes ; second index -> list of triggers that trigger that scene
         long *toggle_scene_triggers[15]; //first index -> scene group index ; second index -> list of triggers that trigger the scene cycling
-        uint16_t group_data[15][15]={256};
+        uint16_t group_data[15][15];
         
 
     public:
