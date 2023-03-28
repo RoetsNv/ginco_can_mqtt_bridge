@@ -18,13 +18,6 @@ void print_m(GCanMessage *msg){
 }
 
 
-
-
-
-
-
-
-
 void init_wifi(){
     setup_wifi();
     client.setServer(mqtt_server, 1883);
@@ -92,11 +85,12 @@ void callback(char* topic, byte* message, unsigned int length) {
       m.function_address=receivedMsg["function_address"];
       m.buffer_size=receivedMsg["buffer_size"];
       m.received_long=receivedMsg["received_long"];
-      gb.identify();
-      gb.send_can_msg(m);
+      //gb->identify();
+      gb->send_can_msg(m);
     }
     else if (strcmp(topic,"ginco_scene_write") == 0){
-      gb.write_scene(receivedMsg);
+      Serial.println("going in write scene");
+      gb->write_scene(receivedMsg);
     }
 
 

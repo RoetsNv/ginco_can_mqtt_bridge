@@ -8,7 +8,7 @@
 
 
 
-extern GincoBridge gb;
+extern GincoBridge *gb;
 extern PubSubClient client;
 void setup_wifi();
 void reconnect();

@@ -3,15 +3,16 @@
 //wifi config        
 WiFiClient espClient;
 PubSubClient client(espClient);
-GincoBridge gb = GincoBridge(0x00,"main_bridge", &client);
+GincoBridge* gb;
 void setup() {
   // put your setup code here, to run once:
     Serial.begin(115200);
+    gb = new GincoBridge(0x00,"main_bridge", &client);
     init_wifi();
 }
 
 void loop() {
-  gb.loop();
+  gb->loop();
   if (!client.connected()) {
       reconnect();
     }
