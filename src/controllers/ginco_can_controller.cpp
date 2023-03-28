@@ -131,6 +131,7 @@ String parse_function(byte function_id){
 }
 void print_message(GCanMessage *msg){
   if(msg->event){Serial.println("This is a Event Message");}else{Serial.println("This is a Action Message");};
+  Serial.print("Can id is : ");Serial.println(msg->extended_id);
   Serial.print("It comes from module: ");Serial.println(msg->source_module_id);
   Serial.print("Linked and ACK: ");Serial.print(msg->linked);Serial.println(msg->ack);
   Serial.print("Feature: ");Serial.print(parse_feature(msg->feature_type));Serial.print(" with index: ");Serial.println(msg->index);
@@ -149,6 +150,7 @@ void GCANController::handle_can_msg(int packet_size){
     Serial.print("packet with id 0x");
     long packetID=CAN.packetId();
     Serial.print(packetID, HEX);
+    Serial.print(packetID);
     if (CAN.packetRtr()) {
     Serial.print(" and requested length ");
     Serial.println(CAN.packetDlc());

@@ -13,6 +13,7 @@ struct GCanMessage {
   size_t buffer_size;
   long received_long;
   GCanMessage() {
+      extended_id=0;
       event=0;
       source_module_id=0;
       linked=0; 
@@ -24,6 +25,7 @@ struct GCanMessage {
       received_long=0;
   }
   GCanMessage(const GCanMessage &other) {
+      extended_id=other.extended_id;
       event=other.event;
       source_module_id=other.source_module_id;
       linked=other.linked; 
