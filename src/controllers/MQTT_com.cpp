@@ -7,7 +7,7 @@ const char* mqtt_server = "192.168.1.89";
 unsigned long now;
 unsigned long lastMsg=0;
 char msgString[250];
-StaticJsonDocument<256> receivedMsg;
+StaticJsonDocument<1024> receivedMsg;
 
 void print_m(GCanMessage *msg){
   if(msg->event){Serial.println("This is a Event Message");}else{Serial.println("This is a Action Message");};
@@ -55,6 +55,7 @@ void reconnect() {
       // Subscribe
       client.subscribe("ginco_can_write");
       client.subscribe("ginco_scene_write");
+      client.subscribe("ginco_bridge_control");
     } else {
       delay(5000);
     }
@@ -86,11 +87,15 @@ void callback(char* topic, byte* message, unsigned int length) {
       m.buffer_size=receivedMsg["buffer_size"];
       m.received_long=receivedMsg["received_long"];
       //gb->identify();
-      gb->send_can_msg(m);
+      gb.send_can_msg(m);
     }
     else if (strcmp(topic,"ginco_scene_write") == 0){
       Serial.println("going in write scene");
-      gb->write_scene(receivedMsg);
+      gb.write_scene(receivedMsg);
+    }
+    else if (strcmp(topic,"ginco_bridge_control") == 0){
+      uint16_t s= receivedMsg["type"];
+      gb.bridge_control(s);
     }
 
 
