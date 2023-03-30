@@ -3,7 +3,9 @@
 #include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <Preferences.h>
-#include <list>
+#include <iostream>
+#include <vector>
+using namespace std;
 
 #include <controllers/ginco_can_controller.h>
 class GincoBridge {
@@ -23,7 +25,7 @@ class GincoBridge {
         StaticJsonDocument<256> receivedJSON;
         PubSubClient *mqtt_client; // MQTT client to talk to
         Preferences flash; // Persistant storage ESP32
-        long **scene_triggers=nullptr; //RAM access to increase performance:  first index -> index in list of scenes ; second index -> list of triggers that trigger that scene
+        vector<vector<long>>scene_triggers; //RAM access to increase performance:  first index -> index in list of scenes ; second index -> list of triggers that trigger that scene
         long *toggle_scene_triggers[15]; //first index -> scene group index ; second index -> list of triggers that trigger the scene cycling
         uint16_t group_data[15][15];
         
@@ -35,13 +37,14 @@ class GincoBridge {
         void long_to_data_buffer(long input);
         void on_can_msg(GCanMessage m);
         void send_can_msg(GCanMessage m);
-        void write_scene(StaticJsonDocument<256> scene_json);
+        void write_scene(StaticJsonDocument<1024> scene_json);
         void check_scenes(long canID);
         void clear_data_buffer();
         void activate_scene(uint16_t index);
         void cycle_scene_group(uint16_t group_id);
         void flash_to_ram();
         void identify();
+        void bridge_control(uint16_t type);
         void loop();
 
 };

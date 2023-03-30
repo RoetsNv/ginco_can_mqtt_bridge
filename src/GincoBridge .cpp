@@ -21,31 +21,18 @@ GincoBridge::GincoBridge(byte moduleID, String friendly_name,PubSubClient* clien
     this->heartbeat_interval=2000;
     this->now=millis();
     this->can_controller=GCANController(this->moduleID);
-    this->flash_to_ram();
 
 }
 void GincoBridge::flash_to_ram(){
-    if(this->scene_triggers != nullptr){
-        //first delete possible allocated memory
-        for(uint16_t i=0;i<sizeof(this->scene_triggers);i++){
-            if(this->scene_triggers[i] != nullptr){
-                delete[] this->scene_triggers[i];
-            }
-        }
-        delete[]this->scene_triggers;
-    }
-    for(uint16_t i=0;i<15;i++){
-        if(this->toggle_scene_triggers[i] != nullptr){
-            delete[] this->toggle_scene_triggers[i];
-        }
-    }
-    this->flash.begin("saved_scenes", true);
+    Serial.println("done clearing memory");
+    this->flash.begin("saved_scenes", false);
     int scene_count = this->flash.getInt("scounter", -1); //defaults to -1 to detect if no scene or group has been set.
+    Serial.print("current scene count is: ");Serial.println(scene_count);
     if(scene_count>=0){
         this->scene_triggers=new long*[scene_count];
         String key= "triggers";
         int arr_size;
-        for(uint16_t i=0;i<scene_count;i++){
+        for(uint16_t i=0;i<=scene_count;i++){
             key= "triggers";
             arr_size= (this->flash.getBytesLength((key+i).c_str()));
             this->scene_triggers[i]=new long[(arr_size/4)];
@@ -54,6 +41,7 @@ void GincoBridge::flash_to_ram(){
             //convert bytes to long
             for(uint16_t trigger_index=0;trigger_index<(arr_size/4);trigger_index++){
             this->scene_triggers[i][trigger_index] = buff_to_long(tt,trigger_index);
+            Serial.print("scene trigger: ");Serial.println(this->scene_triggers[i][trigger_index]);
             }
             //Save index to group for later reference;
             key="group";
@@ -67,7 +55,7 @@ void GincoBridge::flash_to_ram(){
             }
         }
         this->flash.end();
-        this->flash.begin("scene_groups", true);
+        this->flash.begin("scene_groups", false);
         int group_count = this->flash.getInt("gcounter", -1);
         if(group_count>0){
             for(uint16_t i=0;i<group_count;i++){
@@ -82,11 +70,22 @@ void GincoBridge::flash_to_ram(){
                 }
             }
         }
-        
         this->flash.end();
     }
 }
-
+void GincoBridge::bridge_control(uint16_t type){
+    if(type==0){
+        this->flash.begin("saved_scenes",false);
+        this->flash.clear();
+        this->flash.end();
+        this->flash.begin("scene_groups",false);
+        this->flash.clear();
+        this->flash.end();
+        ESP.restart();
+    }else{
+        ESP.restart();
+    }
+}
 void GincoBridge::long_to_data_buffer(long input){
   
   for (int i = 0; i < 4; i++)
@@ -129,7 +128,7 @@ void GincoBridge::send_can_msg(GCanMessage m){
     this->can_controller.send_can_msg(this->can_controller.give_can_id(m.event,m.source_module_id, m.feature_type,m.index,m.function_address,m.ack),data_buffer,m.buffer_size);
 }
 
-void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
+void GincoBridge::write_scene(StaticJsonDocument<1024> scene_json){
     int check_group=scene_json["actions"][0];
     String key= "name";
     long canID;
@@ -144,7 +143,7 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
         uint16_t gid=scene_json["group_id"];
         this->flash.putShort((key+group_counter).c_str(),gid);
         //put trigger ID's
-        key="trigger";
+        key="triggers";
         while(true){
             canID=scene_json["triggers"][count_triggers];
             if(canID==0){
@@ -178,13 +177,14 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
         // msg is a standard scene definition
         this->flash.begin("saved_scenes", false);
         int scene_count = this->flash.getInt("scounter", -1) +1; //index should start at 0 --> +1 
+        this->flash.putInt("scounter",scene_count); // save new value
         Serial.print("scene index is: ");Serial.println(scene_count);
         key= "name";
         String data= scene_json["name"];
         Serial.print("name: ");Serial.println(data);
         this->flash.putString((key+scene_count).c_str(),data);
         //put trigger ID's
-        key="trigger";
+        key="triggers";
         long canID;
         int count_triggers=0;
         while(true){
@@ -199,13 +199,13 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
         Serial.print("Trigger size is : ");Serial.println(count_triggers);
         int id_arr_size=4*count_triggers;
         id_arr_size = (id_arr_size>80)? 80:id_arr_size;
+        Serial.print("Making arr size : ");Serial.println(id_arr_size);
         byte t[4];
         byte tt[id_arr_size];
         for(uint16_t i= 0; i<count_triggers;i++){
             canID=scene_json["triggers"][i];
             memcpy(t,&canID,4);
             uint16_t memindex=0;
-            Serial.println("writing: " +canID);
             for(uint16_t j= 0; j<4;j++){
                 memindex=(4*i)+j;
                 Serial.print(t[j],HEX);Serial.print(" on spot: "); Serial.println(memindex);
@@ -222,7 +222,7 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
         gid=scene_json["group_index"];
         this->flash.putShort((key+scene_count).c_str(),gid);
         //put action ID's
-        key="action";
+        key="actions";
         count_triggers=0;
         while(true){
             canID=scene_json["actions"][count_triggers];
@@ -233,17 +233,20 @@ void GincoBridge::write_scene(StaticJsonDocument<256> scene_json){
                 count_triggers++;
             }
         }
-                Serial.print("Action size is : ");Serial.println(count_triggers);
+        Serial.print("Action size is : ");Serial.println(count_triggers);
         id_arr_size=4*count_triggers;
         id_arr_size = (id_arr_size>80)? 80:id_arr_size;
+        Serial.print("Making arr size : ");Serial.println(id_arr_size);
         byte d[4];
         byte ta[id_arr_size];
         byte td[id_arr_size];
         long payload_data;
+        Serial.println("Done making arrays");
         for(uint16_t i= 0; i<count_triggers;i++){
             canID=scene_json["actions"][i];
             payload_data=scene_json["actions_data"][i];
-            Serial.println("writing: " +canID);
+            Serial.print("writing: ");Serial.println(canID);
+            Serial.print("writing: ");Serial.println(payload_data);
             memcpy(t,&canID,4);
             memcpy(d,&payload_data,4);
             int memindex=0;
