@@ -173,7 +173,7 @@ void GCANController::handle_can_msg(int packet_size){
     //Free up memory allocated by previous msg
     delete this->last_msg;
     this->last_msg=parse_message(packetID,packet_size,received_long);
-    print_message(this->last_msg);
+    //print_message(this->last_msg);
     this->gcan_ready=true;
     }    
 

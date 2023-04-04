@@ -26,7 +26,7 @@ class GincoBridge {
         PubSubClient *mqtt_client; // MQTT client to talk to
         Preferences flash; // Persistant storage ESP32
         vector<vector<long>>scene_triggers; //RAM access to increase performance:  first index -> index in list of scenes ; second index -> list of triggers that trigger that scene
-        long *toggle_scene_triggers[15]; //first index -> scene group index ; second index -> list of triggers that trigger the scene cycling
+        vector<vector<long>>toggle_scene_triggers; //first index -> scene group index ; second index -> list of triggers that trigger the scene cycling
         uint16_t group_data[15][15];
         
 
